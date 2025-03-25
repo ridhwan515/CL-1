@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Credible Story</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login ke Credible Literasi</h2>
+        <form onsubmit="handleLogin(event)">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <p id="error-message" style="color: red; display: none;">Username atau password salah</p>
+    </div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    // Ganti dengan konfigurasi Firebase milikmu
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Fungsi login
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        let email = document.getElementById("email").value;
+        let password = document.getElementById("password").value;
+
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const userID = userCredential.user.uid;
+
+            // Ambil role dari Firestore
+            const userDoc = await getDoc(doc(db, "users", userID));
+            if (userDoc.exists()) {
+                let role = userDoc.data().role;
+
+                // Simpan sesi
+                localStorage.setItem("loggedInUser", userID);
+                localStorage.setItem("userRole", role);
+
+                // Redirect sesuai role
+                if (role === "Penulis") {
+                    window.location.href = "dashboard-penulis.html";
+                } else if (role === "Reviewer") {
+                    window.location.href = "dashboard-reviewer.html";
+                }
+            } else {
+                console.error("User tidak ditemukan di database");
+            }
+        } catch (error) {
+            console.error("Login gagal:", error.message);
+        }
+    }
+
+    document.querySelector("form").addEventListener("submit", handleLogin);
+</script>
+
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            let username = document.getElementById("username").value;
+            let password = document.getElementById("password").value;
+            
+            // Simulasi user dan role
+            let users = {
+                "penulis": { password: "1234", role: "Penulis" },
+                "reviewer": { password: "5678", role: "Reviewer" }
+            };
+            
+            if (users[username] && users[username].password === password) {
+                let role = users[username].role;
+                
+                // Simpan sesi user
+                localStorage.setItem("loggedInUser", username);
+                localStorage.setItem("userRole", role);
+                
+                // Redirect sesuai role
+                if (role === "Penulis") {
+                    window.location.href = "dashboard-penulis.html";
+                } else if (role === "Reviewer") {
+                    window.location.href = "dashboard-reviewer.html";
+                }
+            } else {
+                document.getElementById("error-message").style.display = "block";
+            }
+        }
+    </script>
+</body>
+</html>
