@@ -3,197 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Credible Story</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0;
-            color: #333;
-        }
-
-        .dashboard-container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            width: 400px;
-        }
-
-        h2, h3 {
-            color: #333;
-        }
-
-        .role-section {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f3f4f6;
-            border-radius: 10px;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background: #5a67d8;
-        }
-
-        .popup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            width: 350px;
-            text-align: left;
-        }
-
-        .popup h3 { margin-top: 0; }
-        .popup button { width: auto; margin-top: 10px; }
-    </style>
+    <title>Dashboard Penulis</title>
 </head>
 <body>
-    <div class="dashboard-container">
-        <h2>Selamat datang, <span id="username">User</span>!</h2>
-        <p>Anda login sebagai: <strong><span id="user-role">Penulis</span></strong></p>
-        
-        <div id="penulis-section" class="role-section">
-            <h3>Statistik Anda</h3>
-            <p>Poin: <span id="user-points">0</span></p>
-            <p>Badge: <span id="user-badge">Belum ada</span></p>
-            <button onclick="bukaPopupTulis()">Tulis Baru</button>
-            <button onclick="lihatRiwayat()">Riwayat Tulisan</button>
-        </div>
-        
-        <button onclick="logout()">Logout</button>
-    </div>
+    <h2>Tulisan Anda</h2>
+    <ul id="daftar-tulisan"></ul>
+    <textarea id="isiTulisan" placeholder="Tulis ceritamu di sini..."></textarea>
+    <button id="kirimTulisan">Kirim Tulisan</button>
 
-    <div id="popupTulis" class="popup">
-        <h3>Buat Tulisan Baru</h3>
-        <textarea id="isiTulisan" placeholder="Tulis ceritamu di sini..." rows="8" style="width: 100%; padding: 8px;"></textarea>
-        <button onclick="kirimTulisan()">Kirim</button>
-        <button onclick="tutupPopupTulis()">Tutup</button>
-    </div>
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    <div id="popupRiwayat" class="popup">
-        <h3>Riwayat Tulisan</h3>
-        <div id="riwayat-container"></div>
-        <button onclick="tutupPopupRiwayat()">Tutup</button>
-    </div>
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_ID",
+            appId: "YOUR_APP_ID"
+        };
 
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_MESSAGING_ID",
-        appId: "YOUR_APP_ID"
-    };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        let userID = localStorage.getItem("loggedInUser");
 
-    let userID = localStorage.getItem("loggedInUser");
+        async function loadTulisan() {
+            let daftarTulisan = document.getElementById("daftar-tulisan");
+            daftarTulisan.innerHTML = "";
 
-    async function loadTulisan() {
-        let daftarTulisan = document.getElementById("daftar-tulisan");
-        daftarTulisan.innerHTML = "";
+            let tulisanQuery = query(collection(db, "tulisan"), where("userID", "==", userID));
+            let tulisanSnapshot = await getDocs(tulisanQuery);
 
-        let tulisanQuery = query(collection(db, "tulisan"), where("userID", "==", userID));
-        let tulisanSnapshot = await getDocs(tulisanQuery);
-
-        tulisanSnapshot.forEach((doc) => {
-            let tulisan = doc.data();
-            daftarTulisan.innerHTML += `<li>${tulisan.isiTulisan} - Status: ${tulisan.status}</li>`;
-        });
-    }
-
-    async function simpanTulisan() {
-        let isiTulisan = document.getElementById("isiTulisan").value;
-        await addDoc(collection(db, "tulisan"), { userID, isiTulisan, status: "Menunggu Review" });
-        alert("Tulisan disimpan!");
-        loadTulisan();
-    }
-
-    document.getElementById("kirimTulisan").addEventListener("click", simpanTulisan);
-
-    loadTulisan();
-</script>
-
-    <script>
-        let tulisanUser = [];
-
-        function bukaPopupTulis() {
-            document.getElementById("popupTulis").style.display = "block";
-        }
-
-        function tutupPopupTulis() {
-            document.getElementById("popupTulis").style.display = "none";
-        }
-
-        function kirimTulisan() {
-            let isi = document.getElementById("isiTulisan").value;
-            if (isi.trim() === "") {
-                alert("Tulisan tidak boleh kosong!");
-                return;
-            }
-            
-            let tulisanBaru = {
-                isi: isi,
-                status: "Menunggu Review",
-                komentar: "-"
-            };
-            tulisanUser.push(tulisanBaru);
-            
-            alert("Tulisan telah dikirim untuk direview!");
-            tutupPopupTulis();
-        }
-
-        function lihatRiwayat() {
-            let riwayatContainer = document.getElementById("riwayat-container");
-            riwayatContainer.innerHTML = "";
-            
-            tulisanUser.forEach(tulisan => {
-                let tulisanItem = `<p><strong>Tulisan:</strong> ${tulisan.isi}</p>
-                                  <p>Status: ${tulisan.status}</p>
-                                  <p>Komentar: ${tulisan.komentar}</p>`;
-                riwayatContainer.innerHTML += tulisanItem;
+            tulisanSnapshot.forEach((doc) => {
+                let tulisan = doc.data();
+                daftarTulisan.innerHTML += `<li>${tulisan.isiTulisan} - Status: ${tulisan.status}</li>`;
             });
-            
-            document.getElementById("popupRiwayat").style.display = "block";
         }
 
-        function tutupPopupRiwayat() {
-            document.getElementById("popupRiwayat").style.display = "none";
+        async function simpanTulisan() {
+            let isiTulisan = document.getElementById("isiTulisan").value;
+            await addDoc(collection(db, "tulisan"), { userID, isiTulisan, status: "Menunggu Review" });
+            alert("Tulisan disimpan!");
+            loadTulisan();
         }
 
-        function logout() {
-            alert("Anda telah logout.");
-            window.location.href = "index.html";
-        }
+        document.getElementById("kirimTulisan").addEventListener("click", simpanTulisan);
+
+        loadTulisan();
     </script>
 </body>
 </html>
