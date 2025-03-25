@@ -3,202 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Reviewer - Credible Story</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0;
-            color: #333;
-        }
-
-        .dashboard-container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            width: 400px;
-        }
-
-        h2, h3 {
-            color: #333;
-        }
-
-        .role-section {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f3f4f6;
-            border-radius: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background: #5a67d8;
-        }
-
-        .popup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            width: 350px;
-            text-align: left;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-    </style>
+    <title>Dashboard Reviewer</title>
 </head>
 <body>
-    <div class="dashboard-container">
-        <h2>Selamat datang, <span id="username">Reviewer</span>!</h2>
-        <p>Anda login sebagai: <strong>Reviewer</strong></p>
-        
-        <div id="reviewer-section" class="role-section">
-            <h3>Daftar Penulis</h3>
-            <ul id="daftar-penulis"></ul>
-        </div>
-        
-        <button onclick="logout()">Logout</button>
-    </div>
+    <h2>Daftar Tulisan</h2>
+    <ul id="daftar-tulisan"></ul>
 
-    <div id="popupTulisan" class="popup">
-        <h3>Daftar Tulisan</h3>
-        <ul id="daftar-tulisan"></ul>
-        <button onclick="tutupPopupTulisan()">Tutup</button>
-    </div>
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_MESSAGING_ID",
-        appId: "YOUR_APP_ID"
-    };
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_ID",
+            appId: "YOUR_APP_ID"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    async function loadTulisan() {
-        let daftarTulisan = document.getElementById("daftar-tulisan");
-        daftarTulisan.innerHTML = "";
-
-        let tulisanSnapshot = await getDocs(collection(db, "tulisan"));
-
-        tulisanSnapshot.forEach((docSnap) => {
-            let tulisan = docSnap.data();
-            let docID = docSnap.id;
-
-            daftarTulisan.innerHTML += `
-                <li>${tulisan.isiTulisan} - Status: ${tulisan.status}
-                    <button onclick="reviewTulisan('${docID}')">Review</button>
-                </li>`;
-        });
-    }
-
-    window.reviewTulisan = async function (docID) {
-        let komentar = prompt("Masukkan komentar review:");
-        let status = confirm("Klik OK untuk menyetujui, atau Cancel untuk menunggu perbaikan.") ? "ACC" : "Tunggu Perbaikan";
-
-        let tulisanRef = doc(db, "tulisan", docID);
-        await updateDoc(tulisanRef, { status, komentar });
-
-        alert("Review disimpan!");
-        loadTulisan();
-    };
-
-    loadTulisan();
-</script>
-
-    <div id="popupReview" class="popup">
-        <h3>Review Tulisan</h3>
-        <p id="isiTulisanReview"></p>
-        <textarea id="komentarReviewer" placeholder="Masukkan komentar..." rows="3" style="width: 100%; padding: 8px;"></textarea>
-        <button onclick="setujuiTulisan()">✔ Setujui</button>
-        <button onclick="tundaTulisan()">⏳ Tunggu Perbaikan</button>
-        <button onclick="tolakTulisan()">✖ Tolak</button>
-        <button onclick="tutupPopupReview()">Tutup</button>
-    </div>
-
-    <script>
-        let daftarPenulis = [
-            { nama: "Ali", tulisan: ["Tulisan 1 dari Ali", "Tulisan 2 dari Ali"] },
-            { nama: "Budi", tulisan: ["Tulisan 1 dari Budi"] }
-        ];
-        
-        function tampilkanPenulis() {
-            let daftar = document.getElementById("daftar-penulis");
-            daftar.innerHTML = "";
-            daftarPenulis.forEach((penulis, index) => {
-                let listItem = `<li>${penulis.nama} <button onclick="bukaPopupTulisan(${index})">Lihat Tulisan</button></li>`;
-                daftar.innerHTML += listItem;
-            });
-        }
-        
-        function bukaPopupTulisan(index) {
-            let penulis = daftarPenulis[index];
+        async function loadTulisan() {
             let daftarTulisan = document.getElementById("daftar-tulisan");
             daftarTulisan.innerHTML = "";
-            
-            penulis.tulisan.forEach((tulisan, i) => {
-                daftarTulisan.innerHTML += `<li>${tulisan} <button onclick="bukaPopupReview('${tulisan}')">Review</button></li>`;
+
+            let tulisanSnapshot = await getDocs(collection(db, "tulisan"));
+
+            tulisanSnapshot.forEach((docSnap) => {
+                let tulisan = docSnap.data();
+                let docID = docSnap.id;
+
+                daftarTulisan.innerHTML += `
+                    <li>${tulisan.isiTulisan} - Status: ${tulisan.status}
+                        <button onclick="reviewTulisan('${docID}')">Review</button>
+                    </li>`;
             });
-            
-            document.getElementById("popupTulisan").style.display = "block";
-        }
-        
-        function tutupPopupTulisan() {
-            document.getElementById("popupTulisan").style.display = "none";
-        }
-        
-        function bukaPopupReview(tulisan) {
-            document.getElementById("isiTulisanReview").innerText = tulisan;
-            document.getElementById("popupReview").style.display = "block";
-        }
-        
-        function tutupPopupReview() {
-            document.getElementById("popupReview").style.display = "none";
-        }
-        
-        function tundaTulisan() {
-            alert("Tulisan ditunda untuk perbaikan oleh penulis.");
-            tutupPopupReview();
         }
 
-        function logout() {
-            alert("Anda telah logout.");
-            window.location.href = "index.html";
-        }
-        
-        tampilkanPenulis();
+        loadTulisan();
     </script>
 </body>
 </html>
